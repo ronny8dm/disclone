@@ -13,15 +13,21 @@ import PopoverContentMain from "./voice-status-popover-content-main";
 
 export default function VoiceStatusFooter() {
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>({ mute: true });
-  const currentUserData = generateFakeCurrentUser();
   const { currentUser, setCurrentUser } = useCurrentUserStore();
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    if (currentUserData !== null) {
-      setCurrentUser(currentUserData);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setIsHydrated(true);
   }, []);
+
+  // Don't render anything during hydration to prevent mismatch
+  if (!isHydrated) {
+    return (
+      <div className="flex justify-center items-center bg-semibackground px-2 py-1.5 text-gray-400 text-xs">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -40,8 +46,8 @@ export default function VoiceStatusFooter() {
                     <div className="text-xs font-semibold">
                       {currentUser.name}
                     </div>
-                    <div className="text-[11px] text-gray-300">
-                      {t(`user.status.${currentUser.status}`)}
+                    <div className="text-xs text-gray-400">
+                      {currentUser.username}
                     </div>
                   </div>
                 </button>
@@ -52,12 +58,16 @@ export default function VoiceStatusFooter() {
               />
             </div>
             <PopoverContentMain
-              setCurrentUser={setCurrentUser}
               currentUser={currentUser}
+              setCurrentUser={setCurrentUser}
             />
           </Popover>
         </TooltipProvider>
-      ) : null}
+      ) : (
+        <div className="flex justify-center items-center bg-semibackground px-2 py-1.5 text-gray-400 text-xs">
+          <div className="animate-pulse">Creating your account...</div>
+        </div>
+      )}
     </>
   );
 }

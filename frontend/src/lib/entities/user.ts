@@ -20,6 +20,8 @@ export interface User {
   bio?: string;
   avatar?: string | null;
   status: StaticUserStatuses;
+  token: string;
+  createdAt?: string;
   activity?: Activity | null;
   type?: "user" | "bot";
 }

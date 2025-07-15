@@ -5,7 +5,7 @@ import { BsDiscord } from "react-icons/bs";
 import StatusBadge from "@/components/ui/badge/status-badge";
 
 interface AvatarProps {
-  status?: StaticUserStatuses;
+  status?: StaticUserStatuses ;
   size?: "sm" | "md" | "lg";
   src?: string | null;
   alt: string;
