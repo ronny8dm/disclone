@@ -11,6 +11,7 @@ namespace DiscloneAPI.Services
         Task<UserResponse?> GetUserByUsernameAsync(string username);
         Task<bool> UsernameExistsAsync(string username);
         Task UpdateLastActiveAsync(string userId);
+        Task UpdateUserStatusAsync(string userId, UserStatus status);
     }
 
     public class UserService : IUserService
@@ -102,5 +103,16 @@ namespace DiscloneAPI.Services
             var update = Builders<User>.Update.Set(u => u.LastActiveAt, DateTime.UtcNow);
             await _users.UpdateOneAsync(u => u.Id == userId, update);
         }
+
+        public async Task UpdateUserStatusAsync(string userId, UserStatus status)
+        {
+            var update = Builders<User>.Update
+            .Set(u => u.Status, status)
+            .Set(u => u.LastActiveAt, DateTime.UtcNow);
+
+            await _users.UpdateOneAsync(u => u.Id == userId, update);
+        }
+
+
     }
 }

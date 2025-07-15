@@ -1,5 +1,6 @@
 using DiscloneAPI.Models;
 using DiscloneAPI.Services;
+using DiscloneAPI.Middleware;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -57,6 +58,8 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast");
+
+app.UseMiddleware<JwtMiddleware>();
 
 app.MapControllers();
 

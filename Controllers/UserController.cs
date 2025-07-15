@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using DiscloneAPI.Models.Dto;
 using DiscloneAPI.Services;
+using DiscloneAPI.Attributes;
+using DiscloneAPI.Models;
+using System.Data;
 
 namespace DiscloneAPI.Controllers
 {
@@ -44,6 +47,55 @@ namespace DiscloneAPI.Controllers
                 }
 
                 return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            try
+            {
+                var userId = HttpContext.Items["UserId"]?.ToString();
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { error = "User not authenticated" });
+                }
+
+                var user = await _userService.GetUserByIdAsync(userId);
+                if (user == null)
+                {
+                    return NotFound(new { error = "User not found" });
+                }
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpPut("me/status")]
+        public async Task<IActionResult> UpdateStatus([FromBody] UpdateStatusRequest request)
+        {
+            try
+            {
+                var userId = HttpContext.Items["UserId"]?.ToString();
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { error = "User not authenticated" });
+                }
+
+                await _userService.UpdateUserStatusAsync(userId, request.Status);
+
+                return Ok(new { message = "Status updated successfully" });
             }
             catch (Exception ex)
             {
