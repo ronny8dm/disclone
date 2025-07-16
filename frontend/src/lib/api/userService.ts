@@ -1,3 +1,6 @@
+import { ListedDMChannel } from "../entities/channel";
+import { StaticUserStatuses } from "../entities/user";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5120';
 
 export interface CreateUserRequest {
@@ -29,6 +32,13 @@ export interface UpdateStatusResponse {
   message: string;
   status: number;
   userId?: string;
+}
+
+export interface GetUsersResponse {
+  users: UserResponse[];
+  page: number;
+  limit: number;
+  total: number;
 }
 
 export interface ApiError {
@@ -66,6 +76,7 @@ export class UserService {
     try {
       console.log('🚀 API Request: Getting current user...');
       
+
       const response = await fetch(`${API_BASE_URL}/api/users/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -132,5 +143,53 @@ export class UserService {
       console.error('❌ Error checking username:', error);
       throw error;
     }
+  }
+
+    static async getAllUsers(page: number = 1, limit: number = 50): Promise<GetUsersResponse> {
+      try {
+        console.log('🚀 API Request: Getting all users, page:', page, 'limit:', limit);
+
+        const response = await fetch(`${API_BASE_URL}/api/users?page=${page}&limit=${limit}`, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const data = await response.json();
+        console.log('📡 API Response:', response.status, data);
+
+        if (!response.ok){
+          throw new Error(data.error || `Failed to get users (${response.status})`);
+        }
+
+        return data;
+      } catch (error) {
+        console.error('❌ Error getting all users:', error);
+        throw error;
+      }
+    }
+
+    static convertUserResponseToDMChannel(userResponse: UserResponse): ListedDMChannel {
+    return {
+      id: userResponse.id,
+      name: userResponse.name,
+      username: userResponse.username,
+      avatar: userResponse.avatar,
+      status: this.convertNumericStatusToEnum(userResponse.status),
+      // No activity for real users (you can add this later)
+      activity: undefined,
+    };
+  }
+
+  private static convertNumericStatusToEnum(status: number): StaticUserStatuses {
+    switch (status) {
+      case 0: return StaticUserStatuses.Online;
+      case 1: return StaticUserStatuses.Idle;
+      case 2: return StaticUserStatuses.DND;
+      case 3: return StaticUserStatuses.Offline;
+      case 4: return StaticUserStatuses.Mobile;
+      default: return StaticUserStatuses.Online;
+    }
+    
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 import { clsx } from "@/lib/utils";
 import { BsPlus } from "react-icons/bs";
+import { MdRefresh } from "react-icons/md";
 import {
   Tooltip,
   TooltipContent,
@@ -11,33 +12,66 @@ import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import DMChannelPopover from "./dm-channel-popover";
 import { useState } from "react";
 
-export default function DMChannelListHeader() {
-  const [open, setOpen] = useState(false);
+interface DMChannelListHeaderProps {
+  onLoadMore?: () => void;
+  isLoading?: boolean;
+}
+
+export default function DMChannelListHeader({ onLoadMore, isLoading }: DMChannelListHeaderProps) {
+  const [showPopover, setShowPopover] = useState(false);
+
   return (
-    <TooltipProvider>
-      <Popover open={open} onOpenChange={setOpen}>
-        <div
-          className={clsx(
-            "flex cursor-default items-center justify-between pl-3 pr-2.5 text-xs font-semibold",
-            "align-middle text-gray-400 hover:text-gray-200",
-          )}
-        >
-          DIRECT MESSAGES
+    <div className="flex h-5 items-center justify-between pl-3 pr-2.5">
+      <div className="text-xs font-semibold uppercase text-gray-400">
+        Direct Messages
+      </div>
+      <div className="flex items-center gap-1">
+        {/* Load More Button */}
+        {onLoadMore && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onLoadMore}
+                  disabled={isLoading}
+                  className={clsx(
+                    "flex h-4 w-4 items-center justify-center rounded text-gray-400 transition-colors",
+                    "hover:bg-gray-600 hover:text-white",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
+                >
+                  <MdRefresh className={clsx("h-3 w-3", isLoading && "animate-spin")} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isLoading ? "Loading..." : "Load more users"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+        
+        {/* Original Add Button */}
+        <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <PopoverTrigger asChild>
-                <button className="text-gray-300">
-                  <BsPlus fontSize={22} />
-                </button>
-              </PopoverTrigger>
+              <Popover open={showPopover} onOpenChange={setShowPopover}>
+                <PopoverTrigger asChild>
+                  <button
+                    className={clsx(
+                      "flex h-4 w-4 items-center justify-center rounded text-gray-400 transition-colors",
+                      "hover:bg-gray-600 hover:text-white"
+                    )}
+                  >
+                    <BsPlus className="h-3 w-3" />
+                  </button>
+                </PopoverTrigger>
+                <DMChannelPopover position="top-8 left-0" setOpen={setShowPopover} />
+              </Popover>
             </TooltipTrigger>
-            <TooltipContent className="font-normal text-gray-200">
-              Create DM
-            </TooltipContent>
+            <TooltipContent>Create DM</TooltipContent>
           </Tooltip>
-        </div>
-        <DMChannelPopover setOpen={setOpen} position="left-20" />
-      </Popover>
-    </TooltipProvider>
+        </TooltipProvider>
+      </div>
+    </div>
   );
 }

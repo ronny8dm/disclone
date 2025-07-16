@@ -154,5 +154,33 @@ namespace DiscloneAPI.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllUsers([FromQuery] int page = 1, [FromQuery] int limit = 50)
+
+        {
+            try
+            {
+                var skip = (page - 1) * limit;
+
+
+                var users = await _userService.GetUsersAsync(skip, limit);
+
+                return Ok(new
+                {
+                    users = users,
+                    page = page,
+                    limit = limit,
+                    total = users.Count(),
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
     }
+
 }

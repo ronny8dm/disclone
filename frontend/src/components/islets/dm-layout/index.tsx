@@ -5,7 +5,7 @@ import Header from "@/components/layout/header";
 import DMHeaderMenu from "@/components/islets/dm-header-menu";
 import DMChannelList from "@/components/islets/dm-channel-list";
 import VoiceStatusFooter from "@/components/islets/voice-status-footer";
-
+import { UserService } from "@/lib/api/userService";
 import { ListedDMChannel } from "@/lib/entities/channel";
 import {
   MOCK_DELAY,
@@ -15,9 +15,32 @@ import {
 import { delay } from "@/lib/utils";
 
 export const getData = async (): Promise<{ channels: ListedDMChannel[] }> => {
-  const channels: ListedDMChannel[] = generateRandomFakeChannels(MOCK_CHANNELS);
-  await delay(MOCK_DELAY);
-  return { channels };
+  try {
+    // Fetch real users from database
+    console.log('🚀 Fetching real users for DM list...');
+    const realUsersResponse = await UserService.getAllUsers(1, 10); // Get first 10 real users
+    
+    // Convert real users to DM channels
+    const realUserChannels = realUsersResponse.users.map(user => 
+      UserService.convertUserResponseToDMChannel(user)
+    );
+    
+    // Generate some fake channels to mix with real ones
+    const fakeChannels = generateRandomFakeChannels(Math.max(0, MOCK_CHANNELS - realUserChannels.length));
+    
+    // Combine real and fake channels
+    const allChannels = [...realUserChannels, ...fakeChannels];
+    
+    console.log(`✅ Combined ${realUserChannels.length} real users with ${fakeChannels.length} fake channels`);
+    
+    return { channels: allChannels };
+  } catch (error) {
+    console.error('❌ Error fetching real users, falling back to fake data:', error);
+    
+    // Fallback to fake data if API fails
+    const channels: ListedDMChannel[] = generateRandomFakeChannels(MOCK_CHANNELS);
+    return { channels };
+  }
 };
 
 export default async function DMLayout({ children }: React.PropsWithChildren) {

@@ -12,6 +12,7 @@ namespace DiscloneAPI.Services
         Task<bool> UsernameExistsAsync(string username);
         Task UpdateLastActiveAsync(string userId);
         Task UpdateUserStatusAsync(string userId, UserStatus status);
+        Task<IEnumerable<UserResponse>> GetUsersAsync(int skip = 0, int limit = 50);
     }
 
     public class UserService : IUserService
@@ -113,6 +114,25 @@ namespace DiscloneAPI.Services
             await _users.UpdateOneAsync(u => u.Id == userId, update);
         }
 
+        public async Task<IEnumerable<UserResponse>> GetUsersAsync(int skip = 0, int limt = 50)
+        {
+            var users = await _users
+            .Find(_ => true)
+            .Sort(Builders<User>.Sort.Descending(u => u.LastActiveAt))
+            .Skip(skip)
+            .Limit(limt)
+            .ToListAsync();
+
+            return users.Select(user => new UserResponse
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Username = user.Username,
+                Avatar = user.Avatar,
+                Status = user.Status,
+                LastActiveAt = user.LastActiveAt
+            });
+        }
 
     }
 }

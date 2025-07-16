@@ -62,6 +62,8 @@ export const generateRandomFakeUsers = (length: number): User[] =>
     avatar: faker.image.avatarGitHub(),
     status: faker.helpers.arrayElement(Object.values(StaticUserStatuses)),
     activity: i === 0 ? currentActivity : undefined,
+    token: faker.string.uuid(),
+    createdAt: faker.date.past().toISOString(),
     type: "user",
   }));
 
