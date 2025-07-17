@@ -33,10 +33,12 @@ builder.Services.AddSingleton<MongoDbContext>(serviceProvider =>
 
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddSingleton<IWebSocketManager, MessageService>();
 builder.Services.AddControllers();
 
 
 var app = builder.Build();
+app.UseWebSockets();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

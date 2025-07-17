@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { UserService, CreateUserRequest } from '@/lib/api/userService';
 import { User, StaticUserStatuses } from '@/lib/entities/user';
 import { useCurrentUserStore } from '@/state/user';
+import { webSocketService } from '@/lib/api/webSocketService';
 import { Input } from '@/components/ui/input';
 import Button from '@/components/ui/button/button';
 import { BsPersonFill, BsImageFill, BsX } from 'react-icons/bs';
@@ -37,6 +38,7 @@ export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormPr
   const [selectedAvatar, setSelectedAvatar] = useState(avatarOptions[0]);
   const [customAvatar, setCustomAvatar] = useState('');
   const [showCustomAvatar, setShowCustomAvatar] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<string>(''); // New state for connection status
 
   const { setCurrentUser } = useCurrentUserStore();
 
@@ -76,33 +78,58 @@ export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormPr
     try {
       console.log('🚀 Creating user with data:', formData);
       
+      // Step 1: Create user account
+      setConnectionStatus('Creating account...');
       const response = await UserService.createUser(formData);
       console.log('✅ User created successfully:', response);
-      const status = response.status.toString();
-      // Convert backend response to frontend User type
+      
+      // Step 2: Convert backend response to frontend User type
       const user: User = {
         id: response.id,
         name: response.name,
         username: response.username,
         avatar: response.avatar,
-        status: status as StaticUserStatuses,
+        status: StaticUserStatuses.Online, // Set to online by default
         token: response.token,
         createdAt: response.createdAt,
         type: 'user'
       };
       
-      // Store user in state
-      setCurrentUser(user);
-      
-      // Store token in localStorage for persistence
+      // Step 3: Store user data locally
+      setConnectionStatus('Saving user data...');
       localStorage.setItem('auth_token', response.token);
       localStorage.setItem('current_user', JSON.stringify(user));
+      setCurrentUser(user);
       
       console.log('💾 User data stored successfully');
       
-      onSuccess(user);
+      // Step 4: Establish WebSocket connection
+      setConnectionStatus('Connecting to chat service...');
+      console.log('🔌 Establishing WebSocket connection for user:', user.id);
+      
+      try {
+        await webSocketService.connect(user.id);
+        console.log('✅ WebSocket connected successfully');
+        setConnectionStatus('Connected! Welcome to Disclone!');
+        
+        // Small delay to show success message
+        setTimeout(() => {
+          onSuccess(user);
+        }, 1000);
+        
+      } catch (wsError) {
+        console.warn('⚠️ WebSocket connection failed, but user created successfully:', wsError);
+        setConnectionStatus('Account created! (Chat connection will retry automatically)');
+        
+        // Still call onSuccess even if WebSocket fails
+        setTimeout(() => {
+          onSuccess(user);
+        }, 2000);
+      }
+      
     } catch (error) {
       console.error('❌ Error creating user:', error);
+      setConnectionStatus('');
       
       if (error instanceof Error) {
         if (error.message.includes('Username is already taken')) {
@@ -114,7 +141,9 @@ export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormPr
         setErrors({ general: 'Failed to create user. Please try again.' });
       }
     } finally {
-      setIsLoading(false);
+      if (!connectionStatus.includes('Connected') && !connectionStatus.includes('Account created')) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -174,6 +203,7 @@ export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormPr
                     ? 'border-blue-500' 
                     : 'border-gray-600 hover:border-gray-500'
                 }`}
+                disabled={isLoading}
               >
                 <Avatar src={avatar} alt={`Avatar option ${index + 1}`} size="sm" />
               </button>
@@ -184,7 +214,8 @@ export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormPr
             <button
               type="button"
               onClick={() => setShowCustomAvatar(!showCustomAvatar)}
-              className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
+              className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 disabled:text-gray-500"
+              disabled={isLoading}
             >
               <BsImageFill />
               Use custom avatar URL
@@ -197,12 +228,13 @@ export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormPr
                   value={customAvatar}
                   onChange={(e) => setCustomAvatar(e.target.value)}
                   className="flex-1"
+                  disabled={isLoading}
                 />
                 <Button
                   type="button"
                   onClick={handleCustomAvatar}
                   className="px-4"
-                  disabled={!customAvatar.trim()}
+                  disabled={!customAvatar.trim() || isLoading}
                 >
                   Use
                 </Button>
@@ -258,6 +290,19 @@ export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormPr
           </p>
         </div>
 
+        {/* Connection Status */}
+        {connectionStatus && (
+          <div className={`p-3 rounded-lg text-center ${
+            connectionStatus.includes('Connected') || connectionStatus.includes('Welcome')
+              ? 'bg-green-900/30 border border-green-600 text-green-400'
+              : connectionStatus.includes('Account created')
+              ? 'bg-yellow-900/30 border border-yellow-600 text-yellow-400'
+              : 'bg-blue-900/30 border border-blue-600 text-blue-400'
+          }`}>
+            <p className="text-sm">{connectionStatus}</p>
+          </div>
+        )}
+
         {/* General Error */}
         {errors.general && (
           <div className="bg-red-900/30 border border-red-600 rounded p-3">
@@ -274,7 +319,7 @@ export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormPr
           {isLoading ? (
             <>
               <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-              Creating Account...
+              {connectionStatus || 'Creating Account...'}
             </>
           ) : (
             'Create Account'

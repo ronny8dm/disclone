@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { User, StaticUserStatuses } from '@/lib/entities/user';
 import { useCurrentUserStore } from '@/state/user';
+import { webSocketService } from '@/lib/api/webSocketService';
 import CreateUserForm from '@/components/layout/userForm/CreateUserForm';
 
 export default function UserOnboardingModal() {
@@ -23,16 +24,19 @@ export default function UserOnboardingModal() {
     }
   };
 
+  // First useEffect: Mark as hydrated
   useEffect(() => {
     setIsHydrated(true);
   }, []);
 
+  // Second useEffect: Only run after hydration
   useEffect(() => {
-    // Only run on client side after hydration
-    if (!isHydrated || typeof window === 'undefined') return;
+    // Don't run until hydrated
+    if (!isHydrated) return;
 
-    const checkExistingUser = () => {
+    const checkExistingUser = async () => {
       try {
+        // Only access localStorage after hydration
         const token = localStorage.getItem('auth_token');
         const userData = localStorage.getItem('current_user');
         
@@ -46,6 +50,17 @@ export default function UserOnboardingModal() {
           
           setCurrentUser(user);
           console.log('✅ Found existing user:', user);
+          
+          // Establish WebSocket connection for existing user
+          try {
+            console.log('🔌 Connecting existing user to WebSocket...');
+            await webSocketService.connect(user.id);
+            console.log('✅ Existing user connected to WebSocket');
+          } catch (wsError) {
+            console.warn('⚠️ WebSocket connection failed for existing user:', wsError);
+            // Don't prevent app from loading if WebSocket fails
+          }
+          
           setShowModal(false);
         } else {
           console.log('🎯 No existing user found, showing onboarding');
@@ -61,22 +76,21 @@ export default function UserOnboardingModal() {
       }
     };
 
-    // Small delay to ensure the page has loaded
-    const timer = setTimeout(checkExistingUser, 100);
-    return () => clearTimeout(timer);
-  }, [setCurrentUser, isHydrated]);
+    // Run immediately after hydration (no timeout needed)
+    checkExistingUser();
+  }, [isHydrated, setCurrentUser]);
 
   const handleUserCreated = (user: User) => {
-    console.log('🎉 User successfully created:', user);
+    console.log('🎉 User successfully created and connected:', user);
     setShowModal(false);
   };
 
-  // Don't render anything until hydrated
+  // Early return: Don't render anything until hydrated
   if (!isHydrated) {
     return null;
   }
 
-  // Don't render anything while checking for existing user
+  // Loading state: Show after hydration while checking user
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -93,6 +107,7 @@ export default function UserOnboardingModal() {
     return null;
   }
 
+  // Show onboarding modal
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
       <div className="relative max-w-lg w-full">
