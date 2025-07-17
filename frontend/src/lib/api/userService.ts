@@ -1,5 +1,5 @@
 import { ListedDMChannel } from "../entities/channel";
-import { StaticUserStatuses } from "../entities/user";
+import { StaticUserStatuses, User } from "../entities/user";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5120';
 
@@ -169,6 +169,30 @@ export class UserService {
       }
     }
 
+    static async getUserById(id: string): Promise<UserResponse> {
+  try {
+    console.log('🚀 API Request: Getting user by ID:', id);
+    
+    const response = await fetch(`${API_BASE_URL}/api/users/${id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+    console.log('📡 API Response:', response.status, data);
+
+    if (!response.ok) {
+      throw new Error(data.error || `Failed to get user (${response.status})`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('❌ Error getting user by ID:', error);
+    throw error;
+  }
+}
+
     static convertUserResponseToDMChannel(userResponse: UserResponse): ListedDMChannel {
     return {
       id: userResponse.id,
@@ -180,6 +204,19 @@ export class UserService {
       activity: undefined,
     };
   }
+
+  static convertUserResponseToUser(userResponse: UserResponse): User {
+  return {
+    id: userResponse.id,
+    name: userResponse.name,
+    username: userResponse.username,
+    avatar: userResponse.avatar,
+    status: this.convertNumericStatusToEnum(userResponse.status),
+    type: 'user',
+    token: '', // Real users don't have tokens when fetched from other endpoints
+    createdAt: userResponse.lastActiveAt, // Use lastActiveAt as createdAt fallback
+  };
+}
 
   private static convertNumericStatusToEnum(status: number): StaticUserStatuses {
     switch (status) {
